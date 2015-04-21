@@ -1,0 +1,77 @@
+<!DOCTYPE html>
+<meta content="text/html; charset=UTF-8" http-equiv="Content-Type" />
+<title>TagPies - Comparing co-occurrences of Latin terms</title>
+
+<head>
+	<link href="style.css" rel="stylesheet">
+	<link href="../tagpies.css" rel="stylesheet">
+	<script src="../lib/jquery.min.js"></script>
+	<script src="../lib/d3.v3.min.js"></script>
+	<script src="../d3.layout.cloud.tagpies.js"></script>
+	<script src="../TagPie.js"></script>
+
+	<script src="aeger.js"></script>
+	<script src="gibbus.js"></script>
+	<script src="ars.js"></script>
+</head>
+
+<body>
+
+<div id="headline">eXChange - Comparing co-occurrences of Latin terms with<br><img height="80" src="tagpies.png"/></div>
+
+<table width="100%" id="options"><tr>
+<td>TagPie style:
+<select id="tagpiestyle">
+      <option selected>basic</option>
+      <option>bars</option>
+      <option>italics-bold</option>
+      <option>bold-italics</option>
+      <option>merged</option>
+      <option>merged-black</option>
+    </select>
+</td>
+<td>Dataset:
+<select id="dataset">
+      <option>aeger, aegrotare, aegrotus</option>
+      <option>ars, τέχνη</option>
+      <option selected>gibbus, gibbum, gibbosus</option>
+    </select>
+</td>
+<td><input type="button" id="input-button" value="Generate TagPie" /></td>
+</tr></table>
+
+<div id="vis"></div>
+
+<div id="overlay"></div>
+
+<script>
+
+	$('#vis').css("width",$(window).height());
+	$('#vis').css("margin","auto");
+
+	var generateTagPie = function(){
+		$("#vis").empty();
+		var data = gibbus;
+		if( $("#dataset option:selected").text() == "aeger, aegrotare, aegrotus" ){
+			data = aeger;
+		}
+		if( $("#dataset option:selected").text() == "ars, τέχνη" ){
+			data = ars;
+		}
+		new TagPie("vis",data,{
+			number_of_tags: 500,
+			style: $("#tagpiestyle option:selected").text()
+		});
+		$("#overlay").css("display","none");
+	}
+
+	$("#input-button").click(function(){
+		$("#overlay").css("display","block");
+		setTimeout(function(){ generateTagPie() },100);
+	});
+
+	$("#input-button").trigger('click');
+
+</script>
+
+</body>

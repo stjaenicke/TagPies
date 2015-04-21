@@ -1,0 +1,48 @@
+div.tooltip {   
+  position: absolute;           
+  text-align: center;
+  padding: 2px;             
+  background-color: #EEE;   
+  border: 0px;
+  padding: 5px;
+  border-radius: 8px;           
+  pointer-events: none;         
+}
+
+.chart div {
+  text-align: right;
+  margin: 1px;
+  font-size: 12px;
+}
+
+.chart {
+  vertical-align: top;
+  display: inline-block;
+}
+
+.legend {
+  vertical-align: top;
+  display: inline-block;
+}
+
+.facet {
+  vertical-align: top;
+  display: inline-block;
+}
+
+.legend div {
+  padding: 1px;
+  margin: 1px;
+  font-size: 12px;
+}
+
+.facet div {
+  padding: 1px;
+  margin: 1px;
+  font-size: 12px;
+}
+
+.ttheader {
+  text-align: center !important;
+  text-decoration: underline;
+}

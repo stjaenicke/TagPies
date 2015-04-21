@@ -1,0 +1,204 @@
+<!DOCTYPE html>
+<meta content="text/html; charset=UTF-8" http-equiv="Content-Type" />
+<title>eXChange - Comparing co-occurrences with TagPies</title>
+
+<head>
+
+	<link href='http://fonts.googleapis.com/css?family=Noto+Serif:400,700,400italic,700italic&subset=latin,greek' rel='stylesheet' type='text/css'>
+	<link href="style.css" rel="stylesheet">
+	<link href="lib/tag-it/css/jquery.tagit.css" rel="stylesheet" type="text/css">
+	<link href="lib/tag-it/css/tagit.ui-zendesk.css" rel="stylesheet" type="text/css">
+
+	<script src="lib/jquery/jquery.min.js"></script>
+	<script src="lib/jquery/jquery-ui.min.js"></script>
+	<script src="lib/tag-it/js/tag-it.js" type="text/javascript" charset="utf-8"></script>
+	<script src="lib/d3/d3.v3.min.js"></script>
+
+	<script src="js/Properties.js"></script>
+	<script src="js/DataRetriever.js"></script>
+	<script src="js/colors.js"></script>
+	<script src="js/hcloud.js"></script>
+	<script src="js/stopwords.js"></script>
+	<script src="js/TagPie.js"></script>
+
+</head>
+
+<body>
+
+<a id="exchange" href="http://exchange-projekt.de/"><img height="50" src="img/exchange.png"/></a>
+
+<div id="headline">Comparing co-occurrences with<br><img height="80" src="img/tagpies.png"/></div>
+
+<div id="enter"><i>Enter search terms ...</i></div>
+<table width="100%"><tr>
+<td width="100%"><ul id="searchTerms"></ul></td>
+<td><input type="button" id="input-button" value="Generate TagPie" /></td>
+</tr></table>
+
+<table width="100%" id="options"><tr>
+<td>TagPie style:
+<select id="tagpiestyle">
+      <option selected>basic</option>
+      <option>bars</option>
+      <option>italics-bold</option>
+      <option>bold-italics</option>
+      <option>merged</option>
+      <option>merged-black</option>
+    </select>
+</td>
+<td>Maximum number of tags:
+<select id="maxtags">
+      <option>100</option>
+      <option>250</option>
+      <option selected>500</option>
+      <option>750</option>
+      <option>1000</option>
+    </select>
+</td>
+<td>Maximum co-occurrence distance:
+<select id="coocdistance">
+      <option>1</option>
+      <option>2</option>
+      <option>3</option>
+      <option>4</option>
+      <option selected>5</option>
+      <option>6</option>
+      <option>7</option>
+      <option>8</option>
+      <option>9</option>
+      <option>10</option>
+      <option>15</option>
+      <option>20</option>
+    </select>
+</td>
+</td>
+</tr></table>
+
+<div id="vis"></div>
+<div id="list"></div>
+
+<div id="overlay"></div>
+
+<script>
+
+	$('#searchTerms').tagit();
+	var cd = null;
+
+	var getResults = function(terms,color){
+		$('#list').css("height",$(window).height());
+		$('#list').empty();
+		$('<div style="text-align:center;margin-top:50px;">Retrieving results ... <br> <img width="50" src="img/loader.gif"></div>').appendTo("#list");
+		var major = terms[0];
+		var term = terms[1];
+		var retrieve = function(){
+			DataRetriever.getSnippets3(major+","+term,cd,function(response){
+				$('#list').empty();
+				$('<div class="numresults">'+response.length+' results</div>').appendTo('#list');
+				var res = $('<div>').appendTo('#list');
+				$(res).css('height',$(window).height()-20);
+				$(res).css('overflow-y',"auto");
+				for( var i=0; i<response.length; i++ ){
+					$("<div class='header'><strong>"+response[i].doctitle+"</strong> <i>by "+response[i].author+"</i></div>").appendTo(res);
+					$("<div class='result'>... "+response[i].sequence+" ...</div>").appendTo(res);
+				}
+				$(".highlight0").css("color",color);
+				$(".highlight1").css("color",color);
+			});
+		}
+		setTimeout(function(){ retrieve() },100);
+	}
+
+	$('#vis').css("width",$(window).height());
+	$('#list').css("width",$(window).width()-$(window).height()-20);
+
+	$('#vis').css("display","inline-block");
+	$('#vis').css("vertical-align","top");
+	$('#list').css("display","inline-block");
+	$('#list').css("vertical-align","top");
+
+	var facets = [];
+	var shash = [];
+	for( var i=0; i<stopwords.length; i++ ){
+		shash[stopwords[i]] = true;
+	}
+
+	var generateTagPie = function(){
+		$("#vis").empty();
+		$('#list').empty();
+		new TagPie("vis",facets,{
+			number_of_tags: $("#maxtags option:selected").text(),
+			style: $("#tagpiestyle option:selected").text()
+		});
+		$("#overlay").css("display","none");
+	}
+
+	var lastSet = [];
+
+	var run = function(){
+
+		var st = [];
+		$(".tagit-label").each(function() {
+			st.push($(this).text());
+		});
+
+		if( lastSet.length > 0 && lastSet.length == st.length ){
+			var same = true;
+			for( var i=0; i<lastSet.length; i++ ){
+				if( lastSet[i] != st[i] ){
+					same = false;
+				}
+			}
+			if( same && cd && cd == $("#coocdistance option:selected").text() ){
+				generateTagPie();
+				return;
+			}
+		}
+		lastSet = st;
+		cd = $("#coocdistance option:selected").text();
+
+		facets = [];
+		for( var i=0; i<st.length; i++ ){
+			var facet = {
+				major: null,
+				data: []
+			};
+			DataRetriever.getFrequency(st[i],function(freq){
+				facet.major = {
+					key: st[i],
+					value: freq,
+				};
+			},false);
+			DataRetriever.getCooccurrencesWindow(st[i],$("#coocdistance option:selected").text(),function(data){
+				for( var word in data ){
+					if( shash[word] ){
+						continue;
+					}
+					var value = data[word];
+					if( value >= 1 ){
+						facet.data.push({
+							key: word,
+							value: value,
+						});
+					}
+				}
+			},false);
+			if( facet.data.length > 0 ){
+				facets.push(facet);
+			}
+			else {
+				alert("No results found for "+st[i]);
+			}
+		}
+
+		generateTagPie();
+
+	}
+
+	$("#input-button").click(function(){
+		$("#overlay").css("display","block");
+		setTimeout(function(){ run() },100);
+	});
+
+</script>
+
+</body>

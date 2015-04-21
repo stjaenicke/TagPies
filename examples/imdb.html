@@ -1,0 +1,60 @@
+<!DOCTYPE html>
+<meta content="text/html; charset=UTF-8" http-equiv="Content-Type" />
+<title>TagPies - IMDb Genre Tags</title>
+
+<head>
+	<link href="style.css" rel="stylesheet">
+	<link href="../tagpies.css" rel="stylesheet">
+	<script src="../lib/jquery.min.js"></script>
+	<script src="../lib/d3.v3.min.js"></script>
+	<script src="../d3.layout.cloud.tagpies.js"></script>
+	<script src="../TagPie.js"></script>
+
+	<script src="imdb.js"></script>
+</head>
+
+<body>
+
+<div id="headline">Comparing most important genre tags of IMDb movies with<br><img height="80" src="tagpies.png"/></div>
+
+<table width="100%" id="options"><tr>
+<td>TagPie style:
+<select id="tagpiestyle">
+      <option selected>basic</option>
+      <option>bars</option>
+      <option>italics-bold</option>
+      <option>bold-italics</option>
+      <option>merged</option>
+      <option>merged-black</option>
+    </select>
+</td>
+</tr></table>
+
+<div id="vis"></div>
+
+<div id="overlay"></div>
+
+<script>
+
+	$('#vis').css("width",$(window).height());
+	$('#vis').css("margin","auto");
+
+	var generateTagPie = function(){
+		$("#vis").empty();
+		new TagPie("vis",imdb,{
+			number_of_tags: 600,
+			style: $("#tagpiestyle option:selected").text()
+		});
+		$("#overlay").css("display","none");
+	}
+
+	$("#tagpiestyle").change(function(){
+		$("#overlay").css("display","block");
+		setTimeout(function(){ generateTagPie() },100);
+	});
+
+	$("#tagpiestyle").trigger('change');
+
+</script>
+
+</body>
