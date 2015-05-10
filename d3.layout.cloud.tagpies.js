@@ -528,7 +528,7 @@ ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
       if (d.rotate) c.rotate(d.rotate * cloudRadians);
       c.fillText(d.text, 0, 0);
       if (d.padding) c.lineWidth = 2 * d.padding, c.strokeText(d.text, 0, 0);
-      if( type == "pie" && !d.major || 
+      if( !d.major || 
           type == "pie" && style == "bars" && d.facets && d.facets.f.length > 1 ||
           type == "pie" && ( style == "merged" || style == "merged-black" ) && d.facets && d.facets.length > 1 ){
 		 var wi = c.measureText(d.text).width * ratio;

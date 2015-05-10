@@ -42,7 +42,24 @@ function TagPie(divId, facets, config) {
 	var options = {
 		style: "basic",
 		font: "Georgia",
-		number_of_tags: 500
+		number_of_tags: 500,
+		edit_distance: 0.4,
+		colors: [
+			"#d95f02",
+			"#1b9e77",
+			"#984ea3",
+			"#377eb8",
+			"#e41a1c",
+			"#E6C300",
+			"#4daf4a",
+			"#e7298a",
+			"#7570b3",
+			"#ff7f00",
+			"#66a61e",
+			"#e6ab02",
+			"#f781bf",
+			"#a65628",
+		]
 	};
 	$.extend(options,config);
 
@@ -53,6 +70,7 @@ function TagPie(divId, facets, config) {
 	var majors = [];
 	var allf = 0;
 	var maxFreq = 0;
+	var minFreq = Infinity;
 	var data_facets = [];
 
 	for(var i = 0; i < facets.length; i++) {
@@ -68,14 +86,14 @@ function TagPie(divId, facets, config) {
 		if(f.major.value > maxFreq) {
 			maxFreq = f.major.value;
 		}
+		if(f.major.value < minFreq) {
+			minFreq = f.major.value;
+		}
 		for(var j = 0; j < f.data.length; j++) {
 			var tag = f.data[j];
 			tag.facet = i + 1;
 			tag.major = f.major.id;
 			tag.id = rid++;
-			if(tag.value > maxFreq) {
-				maxFreq = tag.value;
-			}
 		}
 	}
 
@@ -109,6 +127,12 @@ function TagPie(divId, facets, config) {
 		}
 		prioHash[word.key].push(word);
 		freqHash[word.key] += word.value;
+		if(word.value > maxFreq) {
+			maxFreq = word.value;
+		}
+		if(word.value < minFreq) {
+			minFreq = word.value;
+		}
 	}
 
 	for(var i = 0; i < tags1.length; i++) {
@@ -265,15 +289,71 @@ function TagPie(divId, facets, config) {
 	}
 	tags1 = majors.sort(sortData1).concat(tags1);
 
+	var clearData = function(tags){
+		for( var i=0; i<tags.length; i++ ){
+			for( var key in tags[i] ){
+				if( key != "facet" && key != "id" && key != "key" && key != "major" && key != "frequency" && key != "facets" && key != "multiplicity" && key != "value" && key != "majvalue" ){
+					tags[i][key] = undefined;
+				}
+			}
+		}
+	}
+	clearData(tags1);
+
 	var width = $(window).height();
 	var height = $(window).height();
 
-	var colors_saturated =["#0000FF","#FF0000","#228B22","#A52A2A","#00BFFF","#DC143C","#32CD32","#FF8C00","#2F4F4F","#FF69B4","#008080","#800080","#B85B19","#E6C300"];
-	var colors_unsaturated = ["#CCCCFF","#FFCCCC","#A9EAA9","#F0DBC7","#CCF2FF","#F8C3CF","#C1F0C1","#FFDDB3","#AFCFCF","#FFD1E8","#00FFFF","#FFCCFF","#F3C8AA","#FFF7CC"];
+	var colors = options.colors;
+
+	var Hsv2rgb = function(h,s,v){
+		var r, g, b;
+		var var_h = h * 6;
+		if(var_h==6){
+			var_h = 0;
+		}
+		var var_i = Math.floor( var_h );
+		var var_1 = v*(1-s);
+		var var_2 = v*(1-s*(var_h-var_i));
+		var var_3 = v*(1-s*(1-(var_h-var_i)));
+		if(var_i==0) { 
+			var_r = v; 
+			var_g = var_3; 
+			var_b = var_1;
+		}
+		else if(var_i==1) {
+			var_r = var_2;
+			var_g = v;
+			var_b = var_1;
+		}
+		else if(var_i==2) {
+			var_r = var_1;
+			var_g = v;
+			var_b = var_3
+		}
+		else if(var_i==3){
+			var_r = var_1;
+			var_g = var_2;
+			var_b = v;
+		}
+		else if(var_i==4){
+			var_r = var_3;
+			var_g = var_1;
+			var_b = v;
+		}
+		else{
+			var_r = v;
+			var_g = var_1;
+			var_b = var_2
+		}
+		return "rgb("+Math.round(var_r*255)+","+Math.round(var_g*255)+","+Math.round(var_b*255)+")";
+	};
+	for( var i=colors.length; i<facets.length; i++ ){
+		colors.push(Hsv2rgb(((Math.random()*360)+1)/360,1,(25 + (Math.random()*50)+1)/100));
+	}
 
 	// eXChange requirements
 	this.globalHash = globalHash;
-	this.colors_saturated = colors_saturated;
+	this.colors = colors;
 
 	var words = [],
 		max,
@@ -290,6 +370,9 @@ function TagPie(divId, facets, config) {
 			return fontSize(+d.value);
 		})
 		.text(function(d) {
+			if( d.key.indexOf(":") != -1 ){
+				return d.key.split(":")[0];
+			}
 			return d.key;
 		})
 		.on("end", draw0);
@@ -315,21 +398,27 @@ function TagPie(divId, facets, config) {
 		if(max_x - min_x < max_y - min_y) {
 			radius = (max_y - min_y) / 2;
 		}
+		clearData(tags1);
 		layout
 			.font(font)
 			.radius(radius)
 			.rotate(0)
 			.spiral("archimedean"); // "archimedean" or "rectangular"
 		fontSize = d3.scale["log"]().range([10, 50]); // "linear", "sqrt" or "log"
-		if(tags1.length) fontSize.domain([+parseInt($("#input-field8").val()) || 1, +maxFreq]);
+		if(tags1.length) fontSize.domain([minFreq,maxFreq]);
 		complete = 0;
 		words = [];
 		layout.stop().words(tags1).start();
 	}
 
+	var layoutType = "basic";
+	if( data_facets.length > 1 ){
+		layoutType = "pie";
+	}
+
 	var layout = d3.layout.cloud()
 		.timeInterval(10)
-		.type("pie")
+		.type(layoutType)
 		.style(options.style)
 		.size([width * 20, height * 20])
 		.fontSize(function(d) {
@@ -339,6 +428,9 @@ function TagPie(divId, facets, config) {
 			return "italic";
 		})
 		.text(function(d) {
+			if( d.key.indexOf(":") != -1 ){
+				return d.key.split(":")[0];
+			}
 			return d.key;
 		})
 		.on("end", draw);
@@ -494,16 +586,16 @@ function TagPie(divId, facets, config) {
 						}
 					}
 					if(words[i].ulrect) {
-						words[i].ulrect.attr("fill", colors_saturated[words[i].facet - 1]);
+						words[i].ulrect.attr("fill", colors[words[i].facet - 1]);
 					}
 				}
 				d3.selectAll("text").style("fill", function(d) {
 					if(options.style == "merged-black") {
-						if(!d.major || d.facets.length == 1) return colors_saturated[d.facet - 1];
+						if(!d.major || d.facets.length == 1) return colors[d.facet - 1];
 						return "#222";
 					}
 					if(d.selected == 1) return "#000";
-					return colors_saturated[d.facet - 1];
+					return colors[d.facet - 1];
 				});
 				div.transition()
 					.duration(100)
@@ -518,7 +610,8 @@ function TagPie(divId, facets, config) {
 							.attr("d", function(d) {
 								return rounded_rect(words[i].x - words[i].bbox.width / 2, words[i].y - 3 * words[i].size / 4, words[i].bbox.width, words[i].size, words[i].size / 5, true, true, true, true);
 							})
-							.attr("fill", colors_unsaturated[words[i].facet - 1])
+							.attr("fill", colors[words[i].facet - 1])
+							.attr("fill-opacity", 0.3)
 							.attr("transform", "translate(" + [words[i].x, words[i].y] + ")rotate(" + words[i].rotate + ")")
 							.attr("transform", "translate(" + [width >> 1, height >> 1] + ")scale(" + scale + ")");
 						if(options.style == "merged" || options.style == "merged-black") {
@@ -545,7 +638,7 @@ function TagPie(divId, facets, config) {
 						if(words[i].text.substring(0, s) == d.text.substring(0, s)) {
 							var ld = getEditDistance(words[i].text, d.text);
 							var red = 2 * ld / (words[i].text.length + d.text.length);
-							if(red <= 0.4) {
+							if(red <= options.edit_distance) {
 								words[i].selected = 0;
 								var rect = background.append("path")
 									.attr("d", function(d) {
@@ -577,10 +670,10 @@ function TagPie(divId, facets, config) {
 				d3.selectAll("text").style("fill", function(d) {
 					if(d.selected == 1) return "#000";
 					if(options.style == "merged-black") {
-						if(!d.major || d.facets.length == 1) return colors_saturated[d.facet - 1];
+						if(!d.major || d.facets.length == 1) return colors[d.facet - 1];
 						return "#222";
 					}
-					return colors_saturated[d.facet - 1];
+					return colors[d.facet - 1];
 				});
 				div.html("<div class='facet'></div><div class='legend'></div><div class='chart'></div>");
 				var max = 0;
@@ -619,7 +712,7 @@ function TagPie(divId, facets, config) {
 					.data(coo)
 					.enter().append("div")
 					.style("color", function(d) {
-						return colors_saturated[d.facet - 1];
+						return colors[d.facet - 1];
 					})
 					.text(function(d) {
 						if(d.major) return globalHash[d.major].key;
@@ -632,7 +725,7 @@ function TagPie(divId, facets, config) {
 					.enter().append("div")
 					//    .style("width", function(d) { return x(d.value) + "px"; })
 					.style("color", function(d) {
-						return colors_saturated[d.facet - 1];
+						return colors[d.facet - 1];
 					})
 					.text(function(d) {
 						return d.key;
@@ -647,15 +740,15 @@ function TagPie(divId, facets, config) {
 						return x(d.majvalue) + "px";
 					})
 					.style("background-color", function(d) {
-						if(d.selected == 1) return colors_saturated[d.facet - 1];
-						return colors_unsaturated[d.facet - 1];
+						if(d.selected == 1) return colors[d.facet - 1];
+						return "#DDD";
 					})
 					.style("color", function(d) {
 						if(d.selected == 1) return "white";
 						return "#333";
 					})
 					.style("border", function(d) {
-						return "1px solid " + colors_saturated[d.facet - 1];
+						return "1px solid " + colors[d.facet - 1];
 					})
 					.text(function(d) {
 						if(d.major) return d.value;
@@ -681,10 +774,10 @@ function TagPie(divId, facets, config) {
 			})
 			.style("fill", function(d) {
 				if(options.style == "merged-black") {
-					if(!d.major || d.facets.length == 1) return colors_saturated[d.facet - 1];
+					if(!d.major || d.facets.length == 1) return colors[d.facet - 1];
 					return "#222";
 				}
-				return colors_saturated[d.facet - 1];
+				return colors[d.facet - 1];
 			})
 			.style("cursor", "default")
 			.style("font-style", function(d) {
@@ -737,7 +830,7 @@ function TagPie(divId, facets, config) {
 							.attr("y", ys)
 							.attr("width", globalHash[d.facets.f[i]].value / d.facets.v * d.bbox.width)
 							.attr("height", 2)
-							.attr("fill", colors_saturated[globalHash[d.facets.f[i]].facet - 1])
+							.attr("fill", colors[globalHash[d.facets.f[i]].facet - 1])
 							.attr("transform", "translate(" + [d.x, d.y] + ")rotate(" + d.rotate + ")")
 							.attr("transform", "translate(" + [width >> 1, height >> 1] + ")scale(" + scale + ")");
 						xs += globalHash[d.facets.f[i]].value / d.facets.v * d.bbox.width;
@@ -757,7 +850,7 @@ function TagPie(divId, facets, config) {
 							.attr("y", ys)
 							.attr("width", d.facets[i].value / d.value * d.bbox.width)
 							.attr("height", 2)
-							.attr("fill", colors_saturated[d.facets[i].facet - 1])
+							.attr("fill", colors[d.facets[i].facet - 1])
 							.attr("transform", "translate(" + [d.x, d.y] + ")rotate(" + d.rotate + ")")
 							.attr("transform", "translate(" + [width >> 1, height >> 1] + ")scale(" + scale + ")");
 						xs += d.facets[i].value / d.value * d.bbox.width;
@@ -792,7 +885,7 @@ function TagPie(divId, facets, config) {
 	    c.translate(word.x, word.y);
 	    c.rotate(word.rotate * Math.PI / 180);
 	    c.textAlign = "center";
-	    c.fillStyle = colors_saturated[word.facet-1];
+	    c.fillStyle = colors[word.facet-1];
 	    c.font = word.size + "px " + word.font;
 	    c.fillText(word.text, 0, 0);
 	    c.restore();

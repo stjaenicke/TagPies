@@ -28,6 +28,15 @@
       <option>merged-black</option>
     </select>
 </td>
+<td>Maximum number of tags:
+<select id="maxtags">
+      <option>100</option>
+      <option>250</option>
+      <option>500</option>
+      <option>750</option>
+      <option selected>all</option>
+    </select>
+</td>
 </tr></table>
 
 <div id="vis"></div>
@@ -41,14 +50,24 @@
 
 	var generateTagPie = function(){
 		$("#vis").empty();
+		var not = $("#maxtags option:selected").text();
+		if( not == "all" ){
+			not = Infinity;
+		}
 		new TagPie("vis",imdb,{
-			number_of_tags: 600,
-			style: $("#tagpiestyle option:selected").text()
+			number_of_tags: not,
+			style: $("#tagpiestyle option:selected").text(),
+			edit_distance: 0
 		});
 		$("#overlay").css("display","none");
 	}
 
 	$("#tagpiestyle").change(function(){
+		$("#overlay").css("display","block");
+		setTimeout(function(){ generateTagPie() },100);
+	});
+
+	$("#maxtags").change(function(){
 		$("#overlay").css("display","block");
 		setTimeout(function(){ generateTagPie() },100);
 	});
