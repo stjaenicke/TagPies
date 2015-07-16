@@ -119,7 +119,7 @@ ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
         facetWeights.push(0);
       }
       for( var j=0; j<words.length; j++ ){
-        $(helperDiv).html(words[j].key);
+        $(helperDiv).html(words[j].key.replace(/-/g,""));
         $(helperDiv).css("font",words[j].size+"px "+words[j].font);
         facetWeights[words[j].facet-1] += $(helperDiv).width()*$(helperDiv).height();
 	words[j].twidth = $(helperDiv).width();
